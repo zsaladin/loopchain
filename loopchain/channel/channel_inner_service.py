@@ -17,8 +17,10 @@ import copy
 import json
 import pickle
 import re
+from asyncio import Condition
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
+
 from earlgrey import *
 
 from loopchain import configure as conf
@@ -38,10 +40,29 @@ class ChannelInnerTask:
     def __init__(self, channel_service: 'ChannelService'):
         self._channel_service = channel_service
         self._thread_pool = ThreadPoolExecutor(1, "ChannelInnerThread")
+        self._condition_new_block: Condition = None
 
     @message_queue_task
     async def hello(self):
         return 'channel_hello'
+
+    @message_queue_task
+    async def subscribe_new_block(self, citizen_block_height: int):
+        peer_block_height = self._channel_service.block_manager.get_blockchain().block_height
+        if citizen_block_height > peer_block_height:
+            raise RuntimeError
+
+        if citizen_block_height == peer_block_height:
+            async with self._condition_new_block:
+                await self._condition_new_block.wait()
+
+        block_manager = self._channel_service.block_manager
+        new_block_height = citizen_block_height + 1
+        new_block = block_manager.get_blockchain().find_block_by_height(new_block_height)
+        if new_block is None:
+            fail_response_code = message_code.Response.fail_wrong_block_height
+
+        return new_block.get_json_data()
 
     @message_queue_task
     def get_peer_list(self):
@@ -593,8 +614,20 @@ class ChannelInnerTask:
 class ChannelInnerService(MessageQueueService[ChannelInnerTask]):
     TaskType = ChannelInnerTask
 
+    def __init__(self, amqp_target, route_key, username=None, password=None, **task_kwargs):
+        super().__init__(amqp_target, route_key, username, password, **task_kwargs)
+        self._task._condition_new_block = Condition(loop=self.loop)
+
     def _callback_connection_lost_callback(self, connection: RobustConnection):
         util.exit_and_msg("MQ Connection lost.")
+
+    def notify_new_block(self):
+        async def _notify():
+            condition = self._task._condition_new_block
+            async with condition:
+                condition.notify()
+
+        asyncio.run_coroutine_threadsafe(_notify(), self.loop)
 
 
 class ChannelInnerStub(MessageQueueStub[ChannelInnerTask]):
