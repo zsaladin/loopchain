@@ -20,7 +20,7 @@ import pickle
 from loopchain import configure as conf
 from loopchain.blockchain import *
 from loopchain.baseservice import ObjectManager
-from loopchain.consensus import Subscriber, Epoch, Consensus
+from loopchain.consensus import Consensus, Epoch, Subscriber
 from loopchain.baseservice.aging_cache import AgingCache
 
 
@@ -42,9 +42,9 @@ class Proposer(Subscriber):
         self.__prev_epoch: Epoch = kwargs.get("prev_epoch", None)
         self.__precommit_block: Block = kwargs.get("precommit_block", None)
         self.__epoch = kwargs.get("epoch", None)
-        self._event_list = [
-            (Consensus.EVENT_COMPLETE_CONSENSUS, self.callback_complete_consensus),
-            (Consensus.EVENT_MAKE_BLOCK, self.callback_make_block)
+        self.event_list = [
+            (Consensus.EVENT_COMPLETE_CONSENSUS, self.callback_complete_consensus, 1),
+            (Consensus.EVENT_MAKE_BLOCK, self.callback_make_block, 0)
         ]
         self.__block: Block = None
         self.__block_tx_size = 0
@@ -163,6 +163,7 @@ class Proposer(Subscriber):
         self.__makeup_block(tx_queue)
 
     def callback_complete_consensus(self, **kwargs):
+        logging.warning(f"111111111111111111PROPOSER")
         self.__prev_epoch = kwargs.get("prev_epoch", None)
         self.__precommit_block = kwargs.get("precommit_block", None)
         self.__epoch = kwargs.get("epoch", None)

@@ -258,12 +258,12 @@ class ChannelService:
         logging.debug(f"__load_block_manager_each channel({ChannelProperty().name})")
         try:
             self.__block_manager = BlockManager(
+                name="loopchain.peer.BlockManager",
                 channel_manager=self,
                 peer_id=ChannelProperty().peer_id,
                 channel_name=ChannelProperty().name,
                 level_db_identity=ChannelProperty().peer_target
             )
-
             self.__block_manager.consensus_algorithm = self.__init_consensus_algorithm()
         except leveldb.LevelDBError as e:
             util.exit_and_msg("LevelDBError(" + str(e) + ")")
@@ -272,15 +272,16 @@ class ChannelService:
         consensus = Consensus(self, ChannelProperty().name)
         self.__consensus = consensus
         self.__block_manager.consensus = consensus
-        consensus.multiple_register(self.__block_manager)
+        consensus.register(self.__block_manager)
 
     def __init_proposer(self, peer_id: str):
         proposer = Proposer(
             name="loopchain.consensus.Proposer",
             peer_id=peer_id,
             channel=ChannelProperty().name,
-            channel_service=self)
-        self.__consensus.multiple_register(proposer)
+            channel_service=self
+        )
+        self.__consensus.register(proposer)
         self.__proposer = proposer
 
     def __init_acceptor(self, peer_id: str):
@@ -289,8 +290,9 @@ class ChannelService:
             consensus=self.__consensus,
             peer_id=peer_id,
             channel=ChannelProperty().name,
-            channel_service=self)
-        self.__consensus.multiple_register(acceptor)
+            channel_service=self
+        )
+        self.__consensus.register(acceptor)
         self.__acceptor = acceptor
 
     def __init_broadcast_scheduler(self):

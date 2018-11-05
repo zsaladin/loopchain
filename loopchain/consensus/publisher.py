@@ -19,35 +19,37 @@ from loopchain.consensus import Subscriber
 
 
 class Publisher:
+    class Callback:
+        def __init__(self, callback, order):
+            self.callback = callback
+            self.order = order
+
     def __init__(self, events: list):
         self.subscribers: dict = {
-            event: {} for event in events
+            event: [] for event in events
         }
 
-    def get_subscribers(self, event):
-        return self.subscribers[event]
-
-    def register(self, event, subscriber: Subscriber, callback=None):
-        if event not in self.subscribers:
-            return False
-
+    def register(self, subscriber: Subscriber):
         if not isinstance(subscriber, Subscriber):
             return False
 
-        if callback is None:
-            callback = getattr(subscriber, "update")
+        for event, callback, order in subscriber.event_list:
+            if event not in self.subscribers:
+                return False
 
-        self.subscribers[event][subscriber] = callback
+            if callback is None:
+                callback = getattr(subscriber, "update")
 
-    def multiple_register(self, subscriber: Subscriber):
-        for event, callback in subscriber.event_list:
-            self.register(event, subscriber, callback)
+            callback_list = self.subscribers[event]
+            callback_list.append(Publisher.Callback(callback, order))
+            callback_list.sort(key=lambda c: c.order)
 
-    def unregister(self, event, subscriber: Subscriber):
-        del self.subscribers[event][subscriber]
+    def unregister(self, event, callback: Callback):
+        callback_list: list = self.subscribers[event]
+        callback_list[:] = [cb for cb in callback_list if cb.callback != callback]
 
-    def _notify(self, event: str, **kwargs):
-        for callback in self.subscribers[event].values():
-            callback(**kwargs)
+    def _notify(self, event_name: str, **kwargs):
+        for callback in self.subscribers[event_name]:
+            callback.callback(**kwargs)
 
         return True
