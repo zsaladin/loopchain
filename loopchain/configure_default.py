@@ -362,8 +362,6 @@ TOKEN_TYPE_SIGN = "02"
 ###############
 CHANNEL_OPTION = {
     LOOPCHAIN_DEFAULT_CHANNEL: {
-        "store_valid_transaction_only": False,
-        "send_tx_type": SendTxType.pickle,
         "load_cert": False,
         "consensus_cert_use": False,
         "tx_cert_use": False,
@@ -375,8 +373,6 @@ CHANNEL_OPTION = {
         "private_password": b'test'
     },
     LOOPCHAIN_TEST_CHANNEL: {
-        "store_valid_transaction_only": False,
-        "send_tx_type": SendTxType.pickle,
         "load_cert": False,
         "consensus_cert_use": False,
         "tx_cert_use": False,

@@ -26,3 +26,4 @@ terminaltables==3.1.0
 transitions==0.6.8
 verboselogs==1.7
 yappi==0.98
+dataclasses; python_version < '3.7'
